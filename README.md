@@ -152,3 +152,5 @@ The three values **TOR** (Top of Red), **TOY** (Top of Yellow), and **TOG** (Top
 - When it drops below **TOR** → a maximum-priority red alert is raised.
 
 In this way, the system transforms the strategic positioning into a day-to-day operational logic, closing the loop between DDMRP theory and shop-floor execution.
+
+To view the HTML content, please visit: [DDMRP Decoupling Points Presentation](https://danieledellamora1971-ops.github.io/ddmrp-decoupling-points/ddmrp_presentation_en.html)
