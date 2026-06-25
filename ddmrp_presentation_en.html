@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDMRP — Decoupling Point Positioning Algorithm</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a18;min-height:100vh;padding:2rem 1rem}
+  h1{font-size:24px;font-weight:500;margin-bottom:4px;color:#1a1a18}
+  .subtitle{font-size:14px;color:#888;margin-bottom:2rem}
+  section{background:#fff;border:0.5px solid #ddd;border-radius:12px;padding:1.5rem;margin-bottom:2rem}
+  section h2{font-size:16px;font-weight:500;margin-bottom:1rem;color:#1a1a18;padding-bottom:.5rem;border-bottom:0.5px solid #eee}
+  .bom-wrap{width:100%;overflow-x:auto}
+  svg text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  .deck{position:relative}
+  .slide{display:none;flex-direction:column;gap:1rem;min-height:320px;padding:.5rem 0}
+  .slide.active{display:flex}
+  .slide-title{font-size:18px;font-weight:500;color:#1a1a18;margin-bottom:.25rem}
+  .slide-sub{font-size:13px;color:#888;margin-bottom:.75rem}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .card{background:#f7f6f2;border:0.5px solid #ddd;border-radius:8px;padding:12px 16px}
+  .card h3{font-size:14px;font-weight:500;margin-bottom:6px}
+  .card p{font-size:12px;color:#666;line-height:1.6}
+  .phase-block{border-left:3px solid;padding:8px 12px;margin-bottom:8px;border-radius:0 6px 6px 0}
+  .ph1{border-color:#EF9F27;background:#FAEEDA44}
+  .ph2{border-color:#D85A30;background:#F5C4B344}
+  .zone-bar{display:flex;flex-direction:column;gap:6px}
+  .zone{border-radius:6px;padding:8px 14px;font-size:13px;font-weight:500}
+  .zr{background:#F7C1C1;color:#791F1F}
+  .zy{background:#FAEEDA;color:#633806}
+  .zg{background:#C0DD97;color:#173404}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;margin-left:8px;font-weight:400}
+  .arrow-row{display:flex;align-items:center;gap:10px;font-size:13px;color:#444;padding:6px 0}
+  .bullet-circle{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+  .nav{display:flex;align-items:center;gap:8px;padding:.75rem 0 0;border-top:0.5px solid #eee;margin-top:1rem}
+  .nav button{padding:6px 16px;font-size:13px;border:0.5px solid #ccc;background:transparent;color:#1a1a18;border-radius:8px;cursor:pointer}
+  .nav button:hover{background:#f0efe8}
+  .dots{display:flex;gap:6px;flex:1;justify-content:center}
+  .dot{width:7px;height:7px;border-radius:50%;background:#ccc;cursor:pointer;transition:background .2s}
+  .dot.on{background:#1a1a18}
+  .slide-num{font-size:12px;color:#aaa;min-width:40px;text-align:right}
+  .sim-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem}
+  .sim-grid label{font-size:12px;color:#888;display:block;margin-bottom:4px}
+  .sim-row{display:flex;align-items:center;gap:8px}
+  .sim-row input[type=range]{flex:1}
+  .sim-val{font-size:13px;min-width:28px;text-align:right}
+  .ltf-info{font-size:12px;color:#888;margin-top:.5rem}
+  @media(max-width:520px){.row2{grid-template-columns:1fr}.sim-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>DDMRP — Decoupling Point Positioning Algorithm</h1>
+<p class="subtitle">Bill of Materials + interactive slides | Based on MIT Professional Education notes</p>
+
+<!-- BOM DIAGRAM -->
+<section>
+  <h2>Bill of Materials with DDMRP buffers</h2>
+  <div class="bom-wrap">
+  <svg width="100%" viewBox="0 0 680 580" role="img" style="max-width:680px;display:block;margin:0 auto">
+    <title>DDMRP BOM with decoupling points</title>
+    <desc>Bill of Materials for a finished product with 4 buffer nodes highlighted: MP1, C1, C3 in phase 1 and SA1 in phase 2</desc>
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <!-- FP - Finished Product -->
+    <rect x="255" y="20" width="170" height="52" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+    <text x="340" y="42" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#0C447C">Finished Product</text>
+    <text x="340" y="61" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#185FA5">LT=3 | Cum LT=33 d</text>
+
+    <line x1="290" y1="72" x2="190" y2="148" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+    <line x1="390" y1="72" x2="490" y2="148" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- SA1 - Subassembly 1 -->
+    <rect x="110" y="148" width="160" height="52" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+    <text x="190" y="170" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#0C447C">Subassembly 1</text>
+    <text x="190" y="188" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#185FA5">LT=5 | Cum LT=28 d</text>
+
+    <!-- SA2 - Subassembly 2 -->
+    <rect x="410" y="148" width="160" height="52" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+    <text x="490" y="170" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#0C447C">Subassembly 2</text>
+    <text x="490" y="188" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#185FA5">LT=7 | Cum LT=30 d</text>
+
+    <line x1="160" y1="200" x2="110" y2="276" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+    <line x1="220" y1="200" x2="270" y2="276" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+    <line x1="460" y1="200" x2="370" y2="276" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+    <line x1="520" y1="200" x2="570" y2="276" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- C1 BUFFER Phase 1 -->
+    <rect x="30" y="276" width="160" height="52" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+    <text x="110" y="298" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#633806">C1 ★ buffer Ph.1</text>
+    <text x="110" y="316" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#854F0B">LT=8 | Cum LT=23 d</text>
+
+    <!-- C2 -->
+    <rect x="210" y="276" width="160" height="52" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+    <text x="290" y="298" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#444441">C2</text>
+    <text x="290" y="316" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#888780">LT=6 | Cum LT=6 d</text>
+
+    <!-- C3 BUFFER Phase 1 -->
+    <rect x="490" y="276" width="160" height="52" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+    <text x="570" y="298" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#633806">C3 ★ buffer Ph.1</text>
+    <text x="570" y="316" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#854F0B">LT=20 | Cum LT=20 d</text>
+
+    <line x1="110" y1="328" x2="110" y2="404" stroke="#888" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- MP1 BUFFER Phase 1 -->
+    <rect x="30" y="404" width="160" height="52" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+    <text x="110" y="426" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#633806">MP1 ★ buffer Ph.1</text>
+    <text x="110" y="444" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#854F0B">LT=15 | Cum LT=15 d</text>
+
+    <!-- SA1 BUFFER Phase 2 -->
+    <rect x="240" y="404" width="200" height="52" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="1.5"/>
+    <text x="340" y="426" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#4A1B0C">SA1 ✦ buffer Ph.2</text>
+    <text x="340" y="444" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#993C1D">DLT compression: 14→7 d</text>
+
+    <line x1="190" y1="200" x2="340" y2="402" stroke="#ccc" stroke-width="0.5" stroke-dasharray="4 3"/>
+
+    <!-- Legend -->
+    <rect x="40" y="500" width="14" height="14" rx="3" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1"/>
+    <text x="60" y="510" dominant-baseline="central" font-size="12" fill="#666">phase 1 buffer (protection)</text>
+    <rect x="240" y="500" width="14" height="14" rx="3" fill="#FAECE7" stroke="#D85A30" stroke-width="1"/>
+    <text x="260" y="510" dominant-baseline="central" font-size="12" fill="#666">phase 2 buffer (compression)</text>
+    <rect x="460" y="500" width="14" height="14" rx="3" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+    <text x="480" y="510" dominant-baseline="central" font-size="12" fill="#666">non-buffered node</text>
+
+    <text x="340" y="550" text-anchor="middle" font-size="12" fill="#888">Customer Tolerance Time = 12 d | Cum LT without buffers = 33 d | DLT after buffers = 7 d</text>
+  </svg>
+  </div>
+</section>
+
+<!-- SLIDE DECK -->
+<section>
+  <h2>Interactive slides</h2>
+  <div class="deck">
+
+    <div class="slide active" id="s0">
+      <div class="slide-title">What is DDMRP</div>
+      <div class="slide-sub">Demand Driven Material Requirements Planning — critical evolution of classic MRP (Ptak &amp; Smith, 2011)</div>
+      <div class="row2">
+        <div class="card"><h3>Problem: bullwhip effect</h3><p>In classic MRP, a small demand fluctuation amplifies upstream through the BOM, causing overstock, stockouts, and very long perceived lead times.</p></div>
+        <div class="card"><h3>DDMRP solution</h3><p>Decoupling points are deliberately inserted along the BOM. Upstream: push logic. Downstream: pull logic. Uncertainty is absorbed locally by buffers.</p></div>
+      </div>
+      <div class="row2">
+        <div class="card"><h3>5 operative components</h3><p>① Strategic buffer positioning &nbsp;② Buffer zone sizing &nbsp;③ Dynamic adjustments &nbsp;④ Demand-driven planning &nbsp;⑤ Visible &amp; collaborative execution</p></div>
+        <div class="card"><h3>Key advantage</h3><p>The customer's perceived lead time shrinks: when an order arrives, the lead time to cover runs only from the nearest buffer to the finished product.</p></div>
+      </div>
+    </div>
+
+    <div class="slide" id="s1">
+      <div class="slide-title">Two-phase algorithm</div>
+      <div class="slide-sub">How decoupling points are selected — Customer Tolerance Time (CTT) = 12 days</div>
+      <div class="phase-block ph1">
+        <div style="font-size:14px;font-weight:500;color:#633806;margin-bottom:4px">Phase 1 — Protection</div>
+        <div style="font-size:13px;color:#555">Selects purchased items (source=buy) whose cumulative LT exceeds the CTT, or with high supply variability. → Result: <strong>MP1, C1, C3</strong> buffered. Residual DLT of FP = 14 d (still &gt; 12).</div>
+      </div>
+      <div class="phase-block ph2">
+        <div style="font-size:14px;font-weight:500;color:#4A1B0C;margin-bottom:4px">Phase 2 — Compression</div>
+        <div style="font-size:13px;color:#555">If DLT &gt; CTT, iteratively finds the best candidate (max DLT reduction × strategic score). → Adds <strong>SA1</strong>: DLT drops to 7 d &lt; 12. Stop.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:.5rem">
+        <div class="card" style="text-align:center"><div style="font-size:20px;font-weight:500">MP1</div><div style="font-size:11px;color:#888">Cum LT 15 &gt; CTT</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:20px;font-weight:500">C1</div><div style="font-size:11px;color:#888">Cum LT 23 &gt; CTT</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:20px;font-weight:500">C3</div><div style="font-size:11px;color:#888">Cum LT 20 &gt; CTT</div></div>
+        <div class="card" style="text-align:center;border:1.5px solid #D85A30"><div style="font-size:20px;font-weight:500;color:#D85A30">SA1</div><div style="font-size:11px;color:#888">phase 2 — max DLT↓</div></div>
+      </div>
+    </div>
+
+    <div class="slide" id="s2">
+      <div class="slide-title">Buffer zones: Red / Yellow / Green</div>
+      <div class="slide-sub">Each decoupling point has three operative zones calculated on ADU and individual DLT</div>
+      <div class="zone-bar">
+        <div class="zone zg">Green (TOG) <span class="badge" style="background:#97C459;color:#173404">min order</span> = max(ADU × DLT × LTF, MOQ) — baseline replenishment quantity</div>
+        <div class="zone zy">Yellow (TOY) <span class="badge" style="background:#FAC775;color:#412402">order point</span> = ADU × DLT — net position falls here → generate replenishment order</div>
+        <div class="zone zr">Red (TOR) <span class="badge" style="background:#F09595;color:#501313">alert</span> = ADU × DLT × LTF × (1 + VF) — below this threshold: top priority</div>
+      </div>
+      <div class="row2" style="margin-top:.75rem">
+        <div class="card"><h3>Lead Time Factor (LTF)</h3><p>0.7 if DLT &lt; 8 d &nbsp;|&nbsp; 0.5 if 8–20 d &nbsp;|&nbsp; 0.3 if &gt; 20 d. Paradox: longer LT → smaller safety fraction, because the yellow zone is already large.</p></div>
+        <div class="card"><h3>Variability Factor (VF)</h3><p>Additional margin proportional to combined demand and supply uncertainty. Higher variability → higher red zone → more safety stock.</p></div>
+      </div>
+    </div>
+
+    <div class="slide" id="s3">
+      <div class="slide-title">Buffer zone simulator</div>
+      <div class="slide-sub">Adjust ADU, DLT, and variability to see TOR / TOY / TOG thresholds</div>
+      <div class="sim-grid">
+        <div>
+          <label>ADU (units/day)</label>
+          <div class="sim-row"><input type="range" id="adu" min="1" max="50" value="10" oninput="calcZones()"><span class="sim-val" id="adu-v">10</span></div>
+        </div>
+        <div>
+          <label>DLT (days)</label>
+          <div class="sim-row"><input type="range" id="dlt" min="1" max="30" value="10" oninput="calcZones()"><span class="sim-val" id="dlt-v">10</span></div>
+        </div>
+        <div>
+          <label>Variability (0–1)</label>
+          <div class="sim-row"><input type="range" id="vf" min="0" max="100" value="30" oninput="calcZones()"><span class="sim-val" id="vf-v">0.3</span></div>
+        </div>
+      </div>
+      <div class="zone-bar">
+        <div class="zone zg">Green (TOG): <strong id="tog">--</strong> units</div>
+        <div class="zone zy">Yellow (TOY): <strong id="toy">--</strong> units</div>
+        <div class="zone zr">Red (TOR): <strong id="tor">--</strong> units</div>
+      </div>
+      <div class="ltf-info" id="ltf-info"></div>
+    </div>
+
+    <div class="slide" id="s4">
+      <div class="slide-title">Operational summary</div>
+      <div class="slide-sub">DDMRP turns strategic positioning into daily operational logic</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:.5rem">
+        <div class="arrow-row"><div class="bullet-circle" style="background:#E6F1FB;color:#0C447C">1</div><span><strong>Identify</strong> critical BOM nodes: long LT, high variability, shared components (commonality)</span></div>
+        <div class="arrow-row"><div class="bullet-circle" style="background:#FAEEDA;color:#633806">2</div><span><strong>Position</strong> buffers at those nodes — phase 1 protection, phase 2 DLT compression below CTT</span></div>
+        <div class="arrow-row"><div class="bullet-circle" style="background:#C0DD97;color:#27500A">3</div><span><strong>Size</strong> Red/Yellow/Green zones using ADU × DLT with variability and LTF adjustments</span></div>
+        <div class="arrow-row"><div class="bullet-circle" style="background:#FAECE7;color:#4A1B0C">4</div><span><strong>Manage</strong> daily: net position below TOY → generate order; below TOR → red alert, top priority</span></div>
+        <div class="arrow-row"><div class="bullet-circle" style="background:#EEEDFE;color:#26215C">5</div><span><strong>Result</strong>: customer perceived LT = 7 d vs 33 d without buffers — using only 4 active buffers on 6 items</span></div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button onclick="go(-1)">&#8592; Prev</button>
+      <div class="dots" id="dots"></div>
+      <button onclick="go(1)">Next &#8594;</button>
+      <span class="slide-num" id="snum">1 / 5</span>
+    </div>
+  </div>
+</section>
+
+<p style="font-size:12px;color:#aaa;text-align:center;margin-top:1rem">Based on MIT Professional Education — Applied AI &amp; Data Science Program notes | Daniele Della Mora</p>
+
+<script>
+const slides=document.querySelectorAll('.slide');
+const dotsEl=document.getElementById('dots');
+let cur=0;
+slides.forEach((_,i)=>{
+  const d=document.createElement('span');
+  d.className='dot'+(i===0?' on':'');
+  d.onclick=()=>showSlide(i);
+  dotsEl.appendChild(d);
+});
+function showSlide(n){
+  slides[cur].classList.remove('active');
+  dotsEl.children[cur].classList.remove('on');
+  cur=(n+slides.length)%slides.length;
+  slides[cur].classList.add('active');
+  dotsEl.children[cur].classList.add('on');
+  document.getElementById('snum').textContent=(cur+1)+' / '+slides.length;
+  if(cur===3)calcZones();
+}
+function go(d){showSlide(cur+d);}
+function calcZones(){
+  const adu=+document.getElementById('adu').value;
+  const dlt=+document.getElementById('dlt').value;
+  const vf=document.getElementById('vf').value/100;
+  document.getElementById('adu-v').textContent=adu;
+  document.getElementById('dlt-v').textContent=dlt;
+  document.getElementById('vf-v').textContent=vf.toFixed(1);
+  const ltf=dlt<8?0.7:dlt<=20?0.5:0.3;
+  document.getElementById('toy').textContent=Math.round(adu*dlt);
+  document.getElementById('tor').textContent=Math.round(adu*dlt*ltf*(1+vf));
+  document.getElementById('tog').textContent=Math.round(adu*dlt*ltf);
+  document.getElementById('ltf-info').textContent='LTF: '+ltf+' (DLT '+dlt+' d → category '+(dlt<8?'short':dlt<=20?'medium':'long')+')';
+}
+calcZones();
+</script>
+</body>
+</html>
